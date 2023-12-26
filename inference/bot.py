@@ -48,6 +48,47 @@ class ChatModel:
     human_id = "<human>"
     bot_id = "<bot>"
 
+class ChatModel:
+    # ... [rest of the ChatModel class]
+
+    # Modified do_inference method to handle API requests
+    def do_inference_api(self, prompt, max_new_tokens, do_sample, temperature, top_k):
+        """
+        Perform model inference based on API request.
+
+        :param prompt: The input text prompt for the model.
+        :param max_new_tokens: The maximum number of new tokens to generate.
+        :param do_sample: Whether or not to use sampling; True for random sampling.
+        :param temperature: Controls randomness in sampling; higher is more random.
+        :param top_k: The number of highest probability vocabulary tokens to keep for top-k-filtering.
+        :return: The generated text response from the model.
+        """
+
+        # Create a stopping criteria instance for handling stop words
+        stop_criteria = StopWordsCriteria(self._tokenizer, [self.human_id], None)
+
+        # Prepare the input prompt for the model
+        inputs = self._tokenizer(prompt, return_tensors='pt').to(self._model.device)
+
+        # Generate the model output using the provided parameters
+        outputs = self._model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=do_sample,
+            temperature=temperature,
+            top_k=top_k,
+            pad_token_id=self._tokenizer.eos_token_id,
+            stopping_criteria=StoppingCriteriaList([stop_criteria]),
+        )
+
+        # Decode and format the output, removing the input prompt part
+        output = self._tokenizer.batch_decode(outputs)[0]
+        output = output[len(prompt):]
+
+        return output
+   
+
+
     def __init__(self, model_name, gpu_id, max_memory):
         device = torch.device('cuda', gpu_id)   # TODO: allow sending to cpu
 
