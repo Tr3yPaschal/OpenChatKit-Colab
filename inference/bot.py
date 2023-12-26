@@ -5,7 +5,7 @@ INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # TODO: PYTHONPATH hacks are never a good idea. clean this up later
 sys.path.append(os.path.join(INFERENCE_DIR, '..'))
-
+import json
 import cmd
 import torch
 import argparse
@@ -47,8 +47,6 @@ class StopWordsCriteria(StoppingCriteria):
 class ChatModel:
     human_id = "<human>"
     bot_id = "<bot>"
-
-class ChatModel:
     # ... [rest of the ChatModel class]
 
     # Modified do_inference method to handle API requests
