@@ -32,38 +32,26 @@ print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12
 
 @app.route('/', methods=['POST'])
 def chat():
-
     # Get the message from the POST request
     message = request.form.get('message')
 
-    # Perform chat bot logic here using the 'message'
-    chat_model = ChatModel(model_name)
-    
-    # Call do_inference with the prompt and desired parameters
+    # Create a ChatModel instance with the necessary parameters
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
+
+    # Perform chat logic
     bot_response = chat_model.do_inference(
         prompt=message,
         max_new_tokens=128,  # Set the maximum number of tokens for the response
-        do_sample=True,  # Set to True if you want to sample the response
-        temperature=0.6,  # Set the temperature for the LM
-        top_k=40,  # Set the top-k value for the LM
+        do_sample=True,      # Set to True if you want to sample the response
+        temperature=0.6,     # Set the temperature for the LM
+        top_k=40,            # Set the top-k value for the LM
         stream_callback=None  # Set a stream_callback if needed
     )
 
- # Add a delay (e.g., 2 seconds) to allow time for the bot to respond
-    time.sleep(5)  # You can adjust the duration of the delay as needed
-
     # Return the chat bot's response as JSON
     response = {"response": bot_response}
-    
-    return jsonify(response)
- # Add a delay (e.g., 2 seconds) to allow time for the bot to respond
-    time.sleep(5)  # You can adjust the duration of the delay as needed
 
-    # Return the chat bot's response as JSON
-    response = {"response": bot_response}
-    
     return jsonify(response)
-
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
         self._tokenizer = tokenizer
