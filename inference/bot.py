@@ -1,57 +1,25 @@
-
-
-#curl -X POST -H "Content-Type: application/json" -d '{"prompt": "Hello, chatbot!"}' http://127.0.0.1:5000
-
 import os
 import sys
-import cmd
+from flask import Flask, request, jsonify
+from pyngrok import ngrok
+
+INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# TODO: PYTHONPATH hacks are never a good idea. clean this up later
+sys.path.append(os.path.join(INFERENCE_DIR, '..'))
+
 import torch
 import argparse
 import conversation as convo
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
-from flask import Flask, request, jsonify
 
-
-from flask import Flask
-from flask_ngrok import run_with_ngrok
-
+# Define the Flask app
 app = Flask(__name__)
-run_with_ngrok(app) 
 
-
-# # Initialize ngrok settings
-# print("Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth")
-# auth_token = input()
-# conf.get_default().auth_token = auth_token  # Store the auth_token
-
-# Create a Flask web app
-#app = Flask(__name__)
-
-# Initialize the ngrok settings into Flask
-# app.config.from_mapping(
-#     BASE_URL="http://172.28.0.12:5000"
-#     USE_NGROK=os.environ.get("USE_NGROK", "False") == "True"
-# )
-
-# If using ngrok, create a tunnel to the Flask app
-# if app.config.get("USE_NGROK"):
-#     port = 5000
-#     public_url = ngrok.connect(port)
-#     print(f" * ngrok tunnel \"{public_url}\" -> \"http://{public_url.replace('http://', '')}/\"")
-
-# Define your Flask routes and functions here
-# ...
-
-# if __name__ == '__main__':
-#     port = 5000  # Define the port variable here as well
-#     app.run(host='0.0.0.0', port=port)
-
-
-
-
-INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(INFERENCE_DIR, '..'))
+# Set up ngrok
+ngrok_tunnel = ngrok.connect(5000)
+print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:5000/")
 
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
@@ -86,6 +54,7 @@ class ChatModel:
 
     def __init__(self, model_name, gpu_id, max_memory):
         device = torch.device('cuda', gpu_id)
+
         if max_memory is None:
             self._model = AutoModelForCausalLM.from_pretrained(
                 model_name, torch_dtype=torch.float16, device_map="auto")
@@ -94,7 +63,9 @@ class ChatModel:
             config = AutoConfig.from_pretrained(model_name)
             with init_empty_weights():
                 model_from_conf = AutoModelForCausalLM.from_config(config)
+
             model_from_conf.tie_weights()
+
             device_map = infer_auto_device_map(
                 model_from_conf,
                 max_memory=max_memory,
@@ -126,140 +97,12 @@ class ChatModel:
             stopping_criteria=StoppingCriteriaList([stop_criteria]),
         )
         output = self._tokenizer.batch_decode(outputs)[0]
+
         output = output[len(prompt):]
+
         return output
 
-class OpenChatKitShell(cmd.Cmd):
-    intro = "__READY__\n"
-    prompt = ">>> "
-
-    def __init__(self, gpu_id, model_name_or_path, max_tokens, sample, temperature, top_k, retrieval, max_memory, do_stream):
-        super().__init__()
-        self._gpu_id = gpu_id
-        self._model_name_or_path = model_name_or_path
-        self._max_tokens = max_tokens
-        self._sample = sample
-        self._temperature = temperature
-        self._top_k = top_k
-        self._retrieval = retrieval
-        self._max_memory = max_memory
-        self._do_stream = do_stream
-
-    def preloop(self):
-        print(f"Loading {self._model_name_or_path} to cuda:{self._gpu_id}...")
-        self._model = ChatModel(self._model_name_or_path, self._gpu_id, self._max_memory)
-        self._convo = convo.Conversation(
-            self._model.human_id, self._model.bot_id)
-
-    def precmd(self, line):
-        if line.startswith('/'):
-            return line[1:]
-        else:
-            return 'say ' + line
-
-    def do_say(self, arg):
-        if self._retrieval:
-            results = self._index.search(arg)
-            if len(results) > 0:
-                self._convo.push_context_turn(results[0])
-        self._convo.push_human_turn(arg)
-        print("__START__")
-        output = self._model.do_inference(
-            self._convo.get_raw_prompt(),
-            self._max_tokens,
-            self._sample,
-            self._temperature,
-            self._top_k,
-            lambda x: print(x, end='', flush=True) if self._do_stream else None,
-        )
-        print("__END__")
-        self._convo.push_model_response(output)
-        print("" if self._do_stream else self._convo.get_last_turn())
-
-    def do_raw_say(self, arg):
-        output = self._model.do_inference(
-            arg,
-            self._max_tokens,
-            self._sample,
-            self._temperature,
-            self._top_k
-        )
-        print(output)
-
-    def do_raw_prompt(self, arg):
-        print(self._convo.get_raw_prompt())
-
-    def do_reset(self, arg):
-        self._convo = convo.Conversation(
-            self._model.human_id, self._model.bot_id)
-
-    def do_hyperparameters(self, arg):
-        print(
-            f"Hyperparameters:\n"
-            f"  max_tokens: {self._max_tokens}\n"
-            f"  sample: {self._sample}\n"
-            f"  temperature: {self._temperature}\n"
-            f"  top_k: {self._top_k}"
-        )
-
-    def do_quit(self, arg):
-        return True
-
-# Create a Flask web app
-app = Flask(__name__)
-print("flask app created")
-@app.route("/", methods=["POST"])
-def chatbot():
-    print('chat bot defined')
-    data = request.get_json()
-    prompt = data.get("prompt")
-    print("User sent " + prompt)
-    if prompt:
-        response = shell.do_say(prompt)
-        response_data = {
-            "response": response
-        }
-        print("Chat bot says " + response)
-        return jsonify(response_data)
-    else:
-        return jsonify({"error": "Invalid request format"}), 400
+# ... (Rest of the code for OpenChatKitShell class and main() function)
 
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description='test harness for OpenChatKit')
-    parser.add_argument('--gpu-id', default=0, type=int, help='the ID of the GPU to run on')
-    parser.add_argument('--model', default=f"{INFERENCE_DIR}/../huggingface_models/Pythia-Chat-Base-7B", help='name/path of the model')
-    parser.add_argument('--max-tokens', default=128, type=int, help='the maximum number of tokens to generate')
-    parser.add_argument('--sample', default=True, action='store_true', help='indicates whether to sample')
-    parser.add_argument('--no-stream', action='store_true', help='indicates whether to stream tokens')
-    parser.add_argument('--temperature', default=0.6, type=float, help='temperature for the LM')
-    parser.add_argument('--top-k', default=40, type=int, help='top-k for the LM')
-    parser.add_argument('--retrieval', default=False, action='store_true', help='augment queries with context from the retrieval index')
-    parser.add_argument('-g', '--gpu-vram', action='store', help='max VRAM to allocate per GPU', nargs='+', required=False)
-    parser.add_argument('-r', '--cpu-ram', default=None, type=int, help='max CPU RAM to allocate', required=False)
-    args = parser.parse_args()
-
-    if args.gpu_vram is None:
-        max_memory = None
-    else:
-        max_memory = {}
-        for i in range(len(args.gpu_vram)):
-            max_memory[int(args.gpu_vram[i].split(':')[0])] = f"{args.gpu_vram[i].split(':')[1]}GiB"
-        if args.cpu_ram is not None:
-            max_memory['cpu'] = f"{int(args.cpu_ram)}GiB"
-
-    # Create an instance of OpenChatKitShell
-    shell = OpenChatKitShell(
-        args.gpu_id,
-        args.model,
-        args.max_tokens,
-        args.sample,
-        args.temperature,
-        args.top_k,
-        args.retrieval,
-        max_memory,
-        not args.no_stream,
-    )
-
-    # Run the Flask app
-    app.run()
+    main()
