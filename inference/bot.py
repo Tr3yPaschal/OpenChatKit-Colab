@@ -27,7 +27,7 @@ gpu_id = 0  # Default GPU ID (can be updated)
 app = Flask(__name__)
 
 # Set up ngrok
-ngrok_tunnel = ngrok.connect(5000)
+ngrok_tunnel = ngrok.connect(12345)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12345/")
 
 @app.route('/', methods=['POST'])
