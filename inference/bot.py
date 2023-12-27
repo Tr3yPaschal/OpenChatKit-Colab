@@ -32,6 +32,7 @@ print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12
 
 @app.route('/', methods=['POST'])
 def chat():
+
     # Get the message from the POST request
     message = request.form.get('message')
 
@@ -92,6 +93,63 @@ class StopWordsCriteria(StoppingCriteria):
         return False
 
 class ChatModel:
+    human_id = "<human>"
+    bot_id = "<bot>"
+
+    def __init__(self, model_name, gpu_id, max_memory):
+        device = torch.device('cuda', gpu_id)   # TODO: allow sending to cpu
+
+        # recommended default for devices with > 40 GB VRAM
+        # load model onto one device
+        if max_memory is None:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.float16, device_map="auto")
+            self._model.to(device)
+        # load the model with the given max_memory config (for devices with insufficient VRAM or multi-gpu)
+        else:
+            config = AutoConfig.from_pretrained(model_name)
+            # load empty weights
+            with init_empty_weights():
+                model_from_conf = AutoModelForCausalLM.from_config(config)
+
+            model_from_conf.tie_weights()
+
+            # create a device_map from max_memory
+            device_map = infer_auto_device_map(
+                model_from_conf,
+                max_memory=max_memory,
+                no_split_module_classes=["GPTNeoXLayer"],
+                dtype="float16"
+            )
+            # load the model with the above device_map
+            self._model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                device_map=device_map,
+                offload_folder="offload",  # optional offload-to-disk overflow directory (auto-created)
+                offload_state_dict=True,
+                torch_dtype=torch.float16
+            )
+        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    def do_inference(self, prompt, max_new_tokens, do_sample, temperature, top_k, stream_callback=None):
+        stop_criteria = StopWordsCriteria(self._tokenizer, [self.human_id], stream_callback)
+        inputs = (
+            self._tokenizer(prompt, return_tensors='pt')
+            .to(self._model.device)
+        )
+        outputs = self._model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=do_sample,
+            temperature=temperature,
+            top_k=top_k,
+            pad_token_id=self._tokenizer.eos_token_id,
+            stopping_criteria=StoppingCriteriaList([stop_criteria]),
+        )
+        output = self._tokenizer.batch_decode(outputs)[0]
+
+        # remove the context from the output
+        output = output[len(prompt):]
     human_id = "<human>"
     bot_id = "<bot>"
 
