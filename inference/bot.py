@@ -37,7 +37,9 @@ if app.config.get("USE_NGROK"):
 # ...
 
 if __name__ == '__main__':
+    port = 5000  # Define the port variable here as well
     app.run(host='0.0.0.0', port=port)
+
 
 
 
