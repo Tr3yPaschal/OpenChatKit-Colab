@@ -28,6 +28,30 @@ def chat():
     message = request.form.get('message')
 
     # Perform chat bot logic here using the 'message'
+    chat_model = ChatModel(
+        model_name="your_model_name_or_path",
+        gpu_id=0,  # Set your GPU ID here
+        max_memory=None  # Set max_memory if needed, else None
+    )
+    
+    # Replace the following line with your chat bot logic
+    bot_response = chat_model.do_inference(
+        prompt=message,
+        max_new_tokens=128,  # Set the maximum number of tokens for the response
+        do_sample=True,  # Set to True if you want to sample the response
+        temperature=0.6,  # Set the temperature for the LM
+        top_k=40,  # Set the top-k value for the LM
+        stream_callback=None  # Set a stream_callback if needed
+    )
+
+    # Return the chat bot's response as JSON
+    response = {"response": bot_response}
+    
+    return jsonify(response)
+    # Get the message from the POST request
+    message = request.form.get('message')
+
+    # Perform chat bot logic here using the 'message'
 
     # For demonstration purposes, let's simply echo the message
     response = {"response": message}
