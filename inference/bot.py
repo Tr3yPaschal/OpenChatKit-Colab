@@ -44,6 +44,9 @@ def chat():
         stream_callback=None  # Set a stream_callback if needed
     )
 
+ # Add a delay (e.g., 2 seconds) to allow time for the bot to respond
+    time.sleep(5)  # You can adjust the duration of the delay as needed
+
     # Return the chat bot's response as JSON
     response = {"response": bot_response}
     
