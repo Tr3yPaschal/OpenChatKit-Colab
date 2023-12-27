@@ -192,24 +192,25 @@ class OpenChatKitShell(cmd.Cmd):
 
 # Create a Flask web app
 app = Flask(__name__)
-
-@app.route("/", methods=["POST"])
+print("flask app created")
 @app.route("/", methods=["POST"])
 def chatbot():
+    print('chat bot defined')
     data = request.get_json()
     prompt = data.get("prompt")
-    
+    print("User sent " + prompt)
     if prompt:
         response = shell.do_say(prompt)
         response_data = {
             "response": response
         }
+        print("Chat bot says " + response)
         return jsonify(response_data)
     else:
         return jsonify({"error": "Invalid request format"}), 400
 
 if __name__ == '__main__':
-    
+
     parser = argparse.ArgumentParser(description='test harness for OpenChatKit')
     parser.add_argument('--gpu-id', default=0, type=int, help='the ID of the GPU to run on')
     parser.add_argument('--model', default=f"{INFERENCE_DIR}/../huggingface_models/Pythia-Chat-Base-7B", help='name/path of the model')
