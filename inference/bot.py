@@ -12,6 +12,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, Stoppi
 from accelerate import infer_auto_device_map, init_empty_weights
 from flask import Flask, request, jsonify
 
+print("Setting up tunnel")
 # Import ngrok for creating a public URL
 from pyngrok import ngrok, conf
 
