@@ -23,7 +23,7 @@ app = Flask(__name__)
 
 # Initialize the ngrok settings into Flask
 app.config.from_mapping(
-    BASE_URL="http://localhost:5000",
+    BASE_URL="http://172.28.0.12:5000",
     USE_NGROK=os.environ.get("USE_NGROK", "False") == "True"
 )
 
