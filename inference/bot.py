@@ -18,7 +18,8 @@ from pyngrok import ngrok, conf
 
 # Initialize ngrok settings
 print("Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth")
-conf.get_default().auth_token = input()
+auth_token = input()
+conf.get_default().auth_token = auth_token  # Store the auth_token
 
 # Create a Flask web app
 app = Flask(__name__)
@@ -31,10 +32,10 @@ app.config.from_mapping(
 
 # If using ngrok, create a tunnel to the Flask app
 if app.config.get("USE_NGROK"):
-    from pyngrok import ngrok
     port = 5000
     public_url = ngrok.connect(port)
-    print(" * ngrok tunnel \"{}\" -> \"http://127.0.0.1:{}/\"".format(public_url, port))
+    print(f" * ngrok tunnel \"{public_url}\" -> \"http://127.0.0.1:{port}/\"")
+
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(INFERENCE_DIR, '..'))
