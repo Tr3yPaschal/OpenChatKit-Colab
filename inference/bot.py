@@ -2,6 +2,7 @@ import os
 import sys
 from flask import Flask, request, jsonify
 from pyngrok import ngrok
+import time 
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,8 +27,33 @@ app = Flask(__name__)
 ngrok_tunnel = ngrok.connect(5000)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:5000/")
 
-@app.route('/', methods=['POST'])
 def chat():
+    # Get the message from the POST request
+    message = request.form.get('message')
+
+    # Perform chat bot logic here using the 'message'
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
+    
+    # Modify the input format to the tokenizer
+    inputs = chat_model._tokenizer(message, return_tensors='pt')  # Use the tokenizer to format the input
+    
+    # Call do_inference with the formatted input and desired parameters
+    bot_response = chat_model.do_inference(
+        inputs=inputs,  # Pass the formatted input
+        max_new_tokens=128,
+        do_sample=True,
+        temperature=0.6,
+        top_k=40,
+        stream_callback=None
+    )
+
+    # Add a delay (e.g., 2 seconds) to allow time for the bot to respond
+    time.sleep(5)  # You can adjust the duration of the delay as needed
+
+    # Return the chat bot's response as JSON
+    response = {"response": bot_response}
+    
+    return jsonify(response)
     # Get the message from the POST request
     message = request.form.get('message')
 
