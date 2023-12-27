@@ -305,7 +305,3 @@ class StopWordsCriteria(StoppingCriteria):
 
         # Run the Flask app
         app.run(port=5000)
-   
-
-if __name__ == '__main__':
-    main()
