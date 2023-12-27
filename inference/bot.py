@@ -117,6 +117,9 @@ class ChatModel:
 def chat():
     # Get the message from the POST request
     message = request.form.get('message')
+    print(message)
+    object_type = type(message)
+    print(object_type)
 
     # Create a ChatModel instance with the model name
     chat_model = ChatModel(model_name, gpu_id, max_memory)
