@@ -92,7 +92,7 @@ class ChatModel:
     def do_inference(self, prompt, max_new_tokens, do_sample, temperature, top_k, stream_callback=None):
         stop_criteria = StopWordsCriteria(self._tokenizer, [self.human_id], stream_callback)
         inputs = (
-            self._tokenizer(prompt, return_tensors='pt')
+            self._tokenizer(text=prompt, return_tensors='pt')
             .to(self._model.device)
         )
         outputs = self._model.generate(
