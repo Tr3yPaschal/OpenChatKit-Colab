@@ -15,6 +15,10 @@ import conversation as convo
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
 
+model_name = "togethercomputer/RedPajama-INCITE-Base-3B-v1"  # Default model name
+max_memory = None  # Default max_memory (can be updated)
+gpu_id = 0  # Default GPU ID (can be updated)
+
 # Define the Flask app
 app = Flask(__name__)
 
@@ -28,7 +32,7 @@ def chat():
     message = request.form.get('message')
 
     # Perform chat bot logic here using the 'message'
-    chat_model = ChatModel()
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
     
     # Call do_inference with the prompt and desired parameters
     bot_response = chat_model.do_inference(
@@ -213,6 +217,8 @@ class StopWordsCriteria(StoppingCriteria):
             self._stream_callback(self._stream_buffer + text)
             self._stream_buffer = ''
         return False
+    
+    
     if __name__ == '__main__':
         parser = argparse.ArgumentParser(description='Flask ngrok API for Chat Bot')
         parser.add_argument(
@@ -243,6 +249,14 @@ class StopWordsCriteria(StoppingCriteria):
             required=False
         )
         args = parser.parse_args()
+
+         # Update global parameters based on command line arguments
+        global model_name
+        global max_memory
+        global gpu_id
+
+        model_name = args.model
+        gpu_id = args.gpu_id
 
         # set max_memory dictionary if given
         if args.gpu_vram is None:
