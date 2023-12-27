@@ -148,58 +148,58 @@ class ChatModel:
 
         return output
 
-    human_id = "<human>"
-    bot_id = "<bot>"
+    # human_id = "<human>"
+    # bot_id = "<bot>"
 
-    def __init__(self, model_name, gpu_id, max_memory):
-        device = torch.device('cuda', gpu_id)
+    # def __init__(self, model_name, gpu_id, max_memory):
+    #     device = torch.device('cuda', gpu_id)
 
-        if max_memory is None:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.float16, device_map="auto")
-            self._model.to(device)
-        else:
-            config = AutoConfig.from_pretrained(model_name)
-            with init_empty_weights():
-                model_from_conf = AutoModelForCausalLM.from_config(config)
+    #     if max_memory is None:
+    #         self._model = AutoModelForCausalLM.from_pretrained(
+    #             model_name, torch_dtype=torch.float16, device_map="auto")
+    #         self._model.to(device)
+    #     else:
+    #         config = AutoConfig.from_pretrained(model_name)
+    #         with init_empty_weights():
+    #             model_from_conf = AutoModelForCausalLM.from_config(config)
 
-            model_from_conf.tie_weights()
+    #         model_from_conf.tie_weights()
 
-            device_map = infer_auto_device_map(
-                model_from_conf,
-                max_memory=max_memory,
-                no_split_module_classes=["GPTNeoXLayer"],
-                dtype="float16"
-            )
-            self._model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                device_map=device_map,
-                offload_folder="offload",
-                offload_state_dict=True,
-                torch_dtype=torch.float16
-            )
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+    #         device_map = infer_auto_device_map(
+    #             model_from_conf,
+    #             max_memory=max_memory,
+    #             no_split_module_classes=["GPTNeoXLayer"],
+    #             dtype="float16"
+    #         )
+    #         self._model = AutoModelForCausalLM.from_pretrained(
+    #             model_name,
+    #             device_map=device_map,
+    #             offload_folder="offload",
+    #             offload_state_dict=True,
+    #             torch_dtype=torch.float16
+    #         )
+    #     self._tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    def do_inference(self, prompt, max_new_tokens, do_sample, temperature, top_k, stream_callback=None):
-        stop_criteria = StopWordsCriteria(self._tokenizer, [self.human_id], stream_callback)
-        inputs = (
-            self._tokenizer(prompt, return_tensors='pt')
-            .to(self._model.device)
-        )
-        outputs = self._model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=do_sample,
-            temperature=temperature,
-            top_k=top_k,
-            pad_token_id=self._tokenizer.eos_token_id,
-            stopping_criteria=StoppingCriteriaList([stop_criteria]),
-        )
-        output = self._tokenizer.batch_decode(outputs)[0]
+    # def do_inference(self, prompt, max_new_tokens, do_sample, temperature, top_k, stream_callback=None):
+    #     stop_criteria = StopWordsCriteria(self._tokenizer, [self.human_id], stream_callback)
+    #     inputs = (
+    #         self._tokenizer(prompt, return_tensors='pt')
+    #         .to(self._model.device)
+    #     )
+    #     outputs = self._model.generate(
+    #         **inputs,
+    #         max_new_tokens=max_new_tokens,
+    #         do_sample=do_sample,
+    #         temperature=temperature,
+    #         top_k=top_k,
+    #         pad_token_id=self._tokenizer.eos_token_id,
+    #         stopping_criteria=StoppingCriteriaList([stop_criteria]),
+    #     )
+    #     output = self._tokenizer.batch_decode(outputs)[0]
 
-        output = output[len(prompt):]
+    #     output = output[len(prompt):]
 
-        return output
+    #     return output
 
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
