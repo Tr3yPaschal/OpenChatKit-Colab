@@ -9,7 +9,17 @@ from accelerate import infer_auto_device_map, init_empty_weights
 from flask import Flask, request, jsonify
 from pyngrok import ngrok
 
-#curl -X POST -H "Content-Type: application/json" -d '{"prompt": "Hello, chatbot!"}' http://your-ngrok-url.ngrok.io/
+#curl -X POST -H "Content-Type: application/json" -d '{"prompt": "Hello, chatbot!"}' http://127.0.0.1:5000
+import getpass
+import pyngrok
+from pyngrok import ngrok, conf
+
+print("Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth")
+conf.get_default().auth_token = getpass.getpass()
+
+# Open a ngrok tunnel to the Flask app
+public_url = ngrok.connect(5000).public_url
+print(f"ngrok tunnel '{public_url}' -> 'http://127.0.0.1:5000'")
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(INFERENCE_DIR, '..'))
