@@ -36,7 +36,7 @@ def chat():
     message = request.form.get('message')
 
     # Perform chat bot logic here using the 'message'
-    chat_model = ChatModel(model_name, gpu_id, max_memory)
+    chat_model = ChatModel(model_name)
     
     # Call do_inference with the prompt and desired parameters
     bot_response = chat_model.do_inference(
