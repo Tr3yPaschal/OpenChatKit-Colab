@@ -131,7 +131,59 @@ class StopWordsCriteria(StoppingCriteria):
             self._stream_callback(self._stream_buffer + text)
             self._stream_buffer = ''
         return False
-    
+    if __name__ == '__main__':
+        parser = argparse.ArgumentParser(description='Flask ngrok API for Chat Bot')
+        parser.add_argument(
+            '--gpu-id',
+            default=0,
+            type=int,
+            help='the ID of the GPU to run on'
+        )
+        parser.add_argument(
+            '--model',
+            default=f"{INFERENCE_DIR}/../huggingface_models/Pythia-Chat-Base-7B",
+            help='name/path of the model'
+        )
+        parser.add_argument(
+            '-g',
+            '--gpu-vram',
+            action='store',
+            help='max VRAM to allocate per GPU',
+            nargs='+',
+            required=False,
+        )
+        parser.add_argument(
+            '-r',
+            '--cpu-ram',
+            default=None,
+            type=int,
+            help='max CPU RAM to allocate',
+            required=False
+        )
+        args = parser.parse_args()
+
+        # set max_memory dictionary if given
+        if args.gpu_vram is None:
+            max_memory = None
+        else:
+            max_memory = {}
+            for i in range(len(args.gpu_vram)):
+                # assign CUDA ID as label and XGiB as value
+                max_memory[int(args.gpu_vram[i].split(':')[0])] = f"{args.gpu_vram[i].split(':')[1]}GiB"
+
+            if args.cpu_ram is not None:
+                # add CPU to max-memory if given
+                max_memory['cpu'] = f"{int(args.cpu_ram)}GiB"
+
+        chat_model = ChatModel(
+            args.model,
+            args.gpu_id,
+            max_memory,
+        )
+
+        # Run the Flask app
+        app.run(port=5000)
+   
 
 if __name__ == '__main__':
     main()
