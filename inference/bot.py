@@ -22,6 +22,19 @@ app = Flask(__name__)
 ngrok_tunnel = ngrok.connect(5000)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:5000/")
 
+@app.route('/', methods=['POST'])
+def chat():
+    # Get the message from the POST request
+    message = request.form.get('message')
+
+    # Perform chat bot logic here using the 'message'
+
+    # For demonstration purposes, let's simply echo the message
+    response = {"response": message}
+    
+    # Return the response as JSON
+    return jsonify(response)
+
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
         self._tokenizer = tokenizer
