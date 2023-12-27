@@ -1,3 +1,5 @@
+#curl -X POST -d "message=Cool nice to meet you" -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Bearer your_api_key" https://8bb3bfb341d2.ngrok.app
+
 import os
 import sys
 from flask import Flask, request, jsonify
@@ -6,9 +8,10 @@ import torch
 import argparse
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
-
+from flask_cors import CORS
 # Define the Flask app
 app = Flask(__name__)
+api_key = 'a1f7e49d-64df-4f0e-94dd-9629464ed6b9'
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -111,7 +114,17 @@ class ChatModel:
 
         return output
 
+def check_api_key():
+    if 'Authorization' not in request.headers:
+        return jsonify({'message': 'Missing API key'}), 401
 
+    provided_key = request.headers['Authorization']
+
+    if provided_key != f'Bearer {api_key}':
+        return jsonify({'message': 'Invalid API key'}), 401
+
+# Register the check_api_key function to run before each request
+app.before_request(check_api_key)
 
 @app.route('/', methods=['POST'])
 def chat():
