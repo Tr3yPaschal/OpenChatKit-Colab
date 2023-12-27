@@ -1,34 +1,43 @@
 import subprocess
+import json
 import time
 
-# Start the bot.py process with additional arguments
 process = subprocess.Popen(
-    ['python', 'inference/bot.py', 
-     '--model', 'togethercomputer/RedPajama-INCITE-Base-3B-v1', 
-     '-r', '16'], 
-    stdin=subprocess.PIPE, 
-    stdout=subprocess.PIPE, 
-    stderr=subprocess.PIPE, 
-    text=True, 
-    bufsize=1,  # Line buffered
+    ['python', 'inference/bot.py',
+     '--model', 'togethercomputer/RedPajama-INCITE-Base-3B-v1',
+     '-r', '16'],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    text=True,
+    bufsize=1,
     universal_newlines=True)
 
 prompt_encountered = False
 while not prompt_encountered:
-    # Read lines from the process output
     output_line = process.stdout.readline()
-    print(output_line, end='')  # Print the output line
-    if ">>>" in output_line:
+    print(output_line, end='')
+    if "READY" in output_line:
         prompt_encountered = True
 
-# Send the api_inference command to bot.py
-command = 'api_inference {"prompt": "Hello, how are you?", "max_new_tokens": 50, "do_sample": true, "temperature": 0.7, "top_k": 40}\n'
-process.stdin.write(command)
-process.stdin.flush()
+def send_api_request(prompt, max_new_tokens=50, do_sample=True, temperature=0.7, top_k=40):
+    command = 'api_inference ' + json.dumps({
+        "prompt": prompt,
+        "max_new_tokens": max_new_tokens,
+        "do_sample": do_sample,
+        "temperature": temperature,
+        "top_k": top_k
+    }) + '\n'
+    process.stdin.write(command)
+    process.stdin.flush()
+    response = process.stdout.readline()
+    print(response)
 
-# Read the response after the command
-response = process.stdout.readline()
-print(response)
+# Example usage
+send_api_request("Hello, how are you?")
 
-# Close the process
+# Keep the process open for further API requests
+# Implement a loop or a mechanism to accept new API requests here
+# ...
+
 process.terminate()
