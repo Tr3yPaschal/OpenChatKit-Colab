@@ -11,34 +11,41 @@ import conversation as convo
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
 from flask import Flask, request, jsonify
-from pyngrok import ngrok, conf
 
-# Initialize ngrok settings
-print("Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth")
-auth_token = input()
-conf.get_default().auth_token = auth_token  # Store the auth_token
+
+from flask import Flask
+from flask_ngrok import run_with_ngrok
+
+app = Flask(__name__)
+run_with_ngrok(app) 
+
+
+# # Initialize ngrok settings
+# print("Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth")
+# auth_token = input()
+# conf.get_default().auth_token = auth_token  # Store the auth_token
 
 # Create a Flask web app
-app = Flask(__name__)
+#app = Flask(__name__)
 
 # Initialize the ngrok settings into Flask
-app.config.from_mapping(
-    BASE_URL="http://172.28.0.12:5000",
-    USE_NGROK=os.environ.get("USE_NGROK", "False") == "True"
-)
+# app.config.from_mapping(
+#     BASE_URL="http://172.28.0.12:5000"
+#     USE_NGROK=os.environ.get("USE_NGROK", "False") == "True"
+# )
 
 # If using ngrok, create a tunnel to the Flask app
-if app.config.get("USE_NGROK"):
-    port = 5000
-    public_url = ngrok.connect(port)
-    print(f" * ngrok tunnel \"{public_url}\" -> \"http://{public_url.replace('http://', '')}/\"")
+# if app.config.get("USE_NGROK"):
+#     port = 5000
+#     public_url = ngrok.connect(port)
+#     print(f" * ngrok tunnel \"{public_url}\" -> \"http://{public_url.replace('http://', '')}/\"")
 
 # Define your Flask routes and functions here
 # ...
 
-if __name__ == '__main__':
-    port = 5000  # Define the port variable here as well
-    app.run(host='0.0.0.0', port=port)
+# if __name__ == '__main__':
+#     port = 5000  # Define the port variable here as well
+#     app.run(host='0.0.0.0', port=port)
 
 
 
