@@ -30,13 +30,14 @@ app = Flask(__name__)
 ngrok_tunnel = ngrok.connect(12345)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12345/")
 
+
 @app.route('/', methods=['POST'])
 def chat():
     # Get the message from the POST request
     message = request.form.get('message')
 
-    # Create a ChatModel instance with the necessary parameters
-    chat_model = ChatModel(model_name, gpu_id, max_memory)
+    # Create a ChatModel instance with the model name
+    chat_model = ChatModel(model_name)
 
     # Perform chat logic
     bot_response = chat_model.do_inference(
@@ -52,6 +53,8 @@ def chat():
     response = {"response": bot_response}
 
     return jsonify(response)
+
+   
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
         self._tokenizer = tokenizer
