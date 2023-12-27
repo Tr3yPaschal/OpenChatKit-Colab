@@ -11,9 +11,6 @@ import conversation as convo
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
 from flask import Flask, request, jsonify
-
-print("Setting up tunnel")
-# Import ngrok for creating a public URL
 from pyngrok import ngrok, conf
 
 # Initialize ngrok settings
@@ -34,7 +31,14 @@ app.config.from_mapping(
 if app.config.get("USE_NGROK"):
     port = 5000
     public_url = ngrok.connect(port)
-    print(f" * ngrok tunnel \"{public_url}\" -> \"http://127.0.0.1:{port}/\"")
+    print(f" * ngrok tunnel \"{public_url}\" -> \"http://{public_url.replace('http://', '')}/\"")
+
+# Define your Flask routes and functions here
+# ...
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=port)
+
 
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
