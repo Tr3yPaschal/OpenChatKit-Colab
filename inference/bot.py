@@ -1,3 +1,7 @@
+
+
+#curl -X POST -H "Content-Type: application/json" -d '{"prompt": "Hello, chatbot!"}' http://127.0.0.1:5000
+
 import os
 import sys
 import cmd
@@ -7,19 +11,29 @@ import conversation as convo
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
 from flask import Flask, request, jsonify
-from pyngrok import ngrok
 
-#curl -X POST -H "Content-Type: application/json" -d '{"prompt": "Hello, chatbot!"}' http://127.0.0.1:5000
-import getpass
-import pyngrok
+# Import ngrok for creating a public URL
 from pyngrok import ngrok, conf
 
+# Initialize ngrok settings
 print("Enter your authtoken, which can be copied from https://dashboard.ngrok.com/auth")
-conf.get_default().auth_token = getpass.getpass()
+conf.get_default().auth_token = input()
 
-# Open a ngrok tunnel to the Flask app
-public_url = ngrok.connect(5000).public_url
-print(f"ngrok tunnel '{public_url}' -> 'http://127.0.0.1:5000'")
+# Create a Flask web app
+app = Flask(__name__)
+
+# Initialize the ngrok settings into Flask
+app.config.from_mapping(
+    BASE_URL="http://localhost:5000",
+    USE_NGROK=os.environ.get("USE_NGROK", "False") == "True"
+)
+
+# If using ngrok, create a tunnel to the Flask app
+if app.config.get("USE_NGROK"):
+    from pyngrok import ngrok
+    port = 5000
+    public_url = ngrok.connect(port)
+    print(" * ngrok tunnel \"{}\" -> \"http://127.0.0.1:{}/\"".format(public_url, port))
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(INFERENCE_DIR, '..'))
@@ -179,19 +193,6 @@ class OpenChatKitShell(cmd.Cmd):
 # Create a Flask web app
 app = Flask(__name__)
 
-# Initialize the ngrok settings into Flask
-app.config.from_mapping(
-    BASE_URL="http://localhost:5000",
-    USE_NGROK=os.environ.get("USE_NGROK", "False") == "True"
-)
-
-# If we're using ngrok, initialize it and create a tunnel to the Flask app
-if app.config.get("USE_NGROK"):
-    from pyngrok import ngrok
-    port = 5000
-    public_url = ngrok.connect(port)
-    print(" * ngrok tunnel \"{}\" -> \"http://127.0.0.1:{}/\"".format(public_url, port))
-
 @app.route("/", methods=["POST"])
 def chatbot():
     data = request.get_json()
@@ -225,6 +226,7 @@ if __name__ == '__main__':
         if args.cpu_ram is not None:
             max_memory['cpu'] = f"{int(args.cpu_ram)}GiB"
 
+    # Create an instance of OpenChatKitShell
     shell = OpenChatKitShell(
         args.gpu_id,
         args.model,
@@ -236,4 +238,6 @@ if __name__ == '__main__':
         max_memory,
         not args.no_stream,
     )
+
+    # Run the Flask app
     app.run()
