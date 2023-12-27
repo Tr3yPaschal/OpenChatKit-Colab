@@ -1,23 +1,24 @@
+#!/bin/bash
+#source ~/miniconda3/etc/profile.d/conda.sh  # Adjust the path as per your Conda installation
+#conda activate OpenChatKit
+#python /Users/tpaschal/code/OpenChatKit/inference/bot.py --model togethercomputer/Pythia-Chat-Base-7B
+#python /Users/tpaschal/code/OpenChatKit//inference/bot.py --model togethercomputer/RedPajama-INCITE-Base-3B-v1 --no-gpu -r 16
+
 import os
 import sys
-import socket
-import argparse
+
+INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# TODO: PYTHONPATH hacks are never a good idea. clean this up later
+sys.path.append(os.path.join(INFERENCE_DIR, '..'))
+
+import cmd
 import torch
+import argparse
 import conversation as convo
 import retrieval.wikipedia as wp
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
-from pyngrok import ngrok, conf
-
-INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# TODO: PYTHONPATH hacks are never a good idea. Clean this up later
-sys.path.append(os.path.join(INFERENCE_DIR, '..'))
-
-# Define constants for flags
-START_FLAG = "__START__"
-READY_FLAG = "__READY__"
-END_FLAG = "__END__"
 
 
 class StopWordsCriteria(StoppingCriteria):
@@ -54,7 +55,7 @@ class ChatModel:
     bot_id = "<bot>"
 
     def __init__(self, model_name, gpu_id, max_memory):
-        device = torch.device('cuda', gpu_id)   # TODO: allow sending to CPU
+        device = torch.device('cuda', gpu_id)   # TODO: allow sending to cpu
 
         # recommended default for devices with > 40 GB VRAM
         # load model onto one device
@@ -105,14 +106,18 @@ class ChatModel:
         )
         output = self._tokenizer.batch_decode(outputs)[0]
 
-        print(START_FLAG)
+        # remove the context from the output
         output = output[len(prompt):]
 
         return output
 
 
-class OpenChatKitShell:
+class OpenChatKitShell(cmd.Cmd):
+    intro = "Welcome to OpenChatKit shell.   Type /help or /? to list commands.\n"
+    prompt = ">>> "
+
     def __init__(self, gpu_id, model_name_or_path, max_tokens, sample, temperature, top_k, retrieval, max_memory, do_stream):
+        super().__init__()
         self._gpu_id = gpu_id
         self._model_name_or_path = model_name_or_path
         self._max_tokens = max_tokens
@@ -123,88 +128,78 @@ class OpenChatKitShell:
         self._max_memory = max_memory
         self._do_stream = do_stream
 
-        # Create a socket server
-        self.HOST = "127.0.0.1"  # Set your ngrok tunnel URL (127.0.0.1 in this case)
-        self.PORT = 12345  # Set your ngrok tunnel port (12345 in this case)
-        self._server_socket = None
-        self._client_socket = None
+    def preloop(self):
+        print(f"Loading {self._model_name_or_path} to cuda:{self._gpu_id}...")
+        self._model = ChatModel(self._model_name_or_path, self._gpu_id, self._max_memory)
 
-    def start_server(self):
-        # Initialize the server socket
-        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_socket.bind((self.HOST, self.PORT))
-        self._server_socket.listen()
+        if self._retrieval:
+            print(f"Loading retrieval index...")
+            self._index = wp.WikipediaIndex()
 
-        print(READY_FLAG)
+        self._convo = convo.Conversation(
+            self._model.human_id, self._model.bot_id)
 
-        # Accept a connection from the client
-        self._client_socket, _ = self._server_socket.accept()
+    def precmd(self, line):
+        if line.startswith('/'):
+            return line[1:]
+        else:
+            return 'say ' + line
 
-        # Start processing messages from the client
-        self.process_messages()
+    def do_say(self, arg):
+        if self._retrieval:
+            results = self._index.search(arg)
+            if len(results) > 0:
+                self._convo.push_context_turn(results[0])
 
-    def process_messages(self):
-        # Initialize conversation components
-        model = ChatModel(self._model_name_or_path, self._gpu_id, self._max_memory)
-        convo = convo.Conversation(model.human_id, model.bot_id)
+        self._convo.push_human_turn(arg)
 
-        while True:
-            message = self._client_socket.recv(1024).decode()
-            if not message:
-                break
+        output = self._model.do_inference(
+            self._convo.get_raw_prompt(),
+            self._max_tokens,
+            self._sample,
+            self._temperature,
+            self._top_k,
+            lambda x : print(x, end='', flush=True) if self._do_stream else None,
+        )
 
-            # Check for the __END__ flag to exit
-            if message == END_FLAG:
-                break
+        self._convo.push_model_response(output)
 
-            # Check for the __START__ flag to indicate the start of a new conversation
-            if message == START_FLAG:
-                convo = convo.Conversation(model.human_id, model.bot_id)
-                continue
+        print("" if self._do_stream else self._convo.get_last_turn())
 
-            # Process the message
-            if self._retrieval:
-                results = model._index.search(message)
-                if len(results) > 0:
-                    convo.push_context_turn(results[0])
+    def do_raw_say(self, arg):
+        output = self._model.do_inference(
+            arg,
+            self._max_tokens,
+            self._sample,
+            self._temperature,
+            self._top_k
+        )
 
-            convo.push_human_turn(message)
+        print(output)
 
-            output = model.do_inference(
-                convo.get_raw_prompt(),
-                self._max_tokens,
-                self._sample,
-                self._temperature,
-                self._top_k,
-                lambda x: self._client_socket.send(x.encode()) if self._do_stream else None,
-            )
+    def do_raw_prompt(self, arg):
+        print(self._convo.get_raw_prompt())
 
-            convo.push_model_response(output)
+    def do_reset(self, arg):
+        self._convo = convo.Conversation(
+            self._model.human_id, self._model.bot_id)
 
-            response = "" if self._do_stream else convo.get_last_turn()
+    def do_hyperparameters(self, arg):
+        print(
+            f"Hyperparameters:\n"
+            f"  max_tokens: {self._max_tokens}\n"
+            f"  sample: {self._sample}\n"
+            f"  temperature: {self._temperature}\n"
+            f"  top_k: {self._top_k}"
+        )
 
-            # Send the response back to the client
-            self._client_socket.send(response.encode())
-
-    def close_connections(self):
-        if self._client_socket:
-            self._client_socket.close()
-        if self._server_socket:
-            self._server_socket.close()
-
-    def run(self):
-        try:
-            # Start the server
-            self.start_server()
-        except Exception as e:
-            print("An error occurred:", str(e))
-        finally:
-            self.close_connections()
+    def do_quit(self, arg):
+        return True
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Test harness for OpenChatKit')
+        description='test harness for OpenChatKit')
 
     parser.add_argument(
         '--gpu-id',
@@ -268,34 +263,22 @@ def main():
         help='max CPU RAM to allocate',
         required=False
     )
-    parser.add_argument(
-        '--ngrok-host',
-        default='localhost',
-        help='host for ngrok tunnel'
-    )
-    parser.add_argument(
-        '--ngrok-port',
-        default=5000,
-        type=int,
-        help='port for ngrok tunnel'
-    )
     args = parser.parse_args()
 
-    # Set max_memory dictionary if given
+    # set max_memory dictionary if given
     if args.gpu_vram is None:
         max_memory = None
     else:
         max_memory = {}
         for i in range(len(args.gpu_vram)):
-            # Assign CUDA ID as label and XGiB as value
+            # assign CUDA ID as label and XGiB as value
             max_memory[int(args.gpu_vram[i].split(':')[0])] = f"{args.gpu_vram[i].split(':')[1]}GiB"
 
         if args.cpu_ram is not None:
-            # Add CPU to max-memory if given
+            # add cpu to max-memory if given
             max_memory['cpu'] = f"{int(args.cpu_ram)}GiB"
 
-    # Initialize and run the chat server
-    chat_server = OpenChatKitShell(
+    OpenChatKitShell(
         args.gpu_id,
         args.model,
         args.max_tokens,
@@ -305,8 +288,7 @@ def main():
         args.retrieval,
         max_memory,
         not args.no_stream,
-    )
-    chat_server.run()
+    ).cmdloop()
 
 
 if __name__ == '__main__':
