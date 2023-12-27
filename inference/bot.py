@@ -34,6 +34,22 @@ def chat():
         max_memory=None  # Set max_memory if needed, else None
     )
     
+    # Call do_inference with the prompt and desired parameters
+    bot_response = chat_model.do_inference(
+        prompt=message,
+        max_new_tokens=128,  # Set the maximum number of tokens for the response
+        do_sample=True,  # Set to True if you want to sample the response
+        temperature=0.6,  # Set the temperature for the LM
+        top_k=40,  # Set the top-k value for the LM
+        stream_callback=None  # Set a stream_callback if needed
+    )
+
+    # Return the chat bot's response as JSON
+    response = {"response": bot_response}
+    
+    return jsonify(response)
+
+    
     # Replace the following line with your chat bot logic
     bot_response = chat_model.do_inference(
         prompt=message,
