@@ -16,6 +16,9 @@ import conversation as convo
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
 
+#curl -X POST -d "message=Your_Message_Here" http://localhost:5000
+
+
 model_name = "togethercomputer/RedPajama-INCITE-Base-3B-v1"  # Default model name
 max_memory = None  # Default max_memory (can be updated)
 gpu_id = 0  # Default GPU ID (can be updated)
