@@ -16,7 +16,7 @@ import cmd
 import torch
 import argparse
 import conversation as convo
-import retrieval.wikipedia as wp
+#import retrieval.wikipedia as wp
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
 
@@ -113,7 +113,7 @@ class ChatModel:
 
 
 class OpenChatKitShell(cmd.Cmd):
-    intro = "Welcome to OpenChatKit shell.   Type /help or /? to list commands.\n"
+    intro = "__READY__\n"
     prompt = ">>> "
 
     def __init__(self, gpu_id, model_name_or_path, max_tokens, sample, temperature, top_k, retrieval, max_memory, do_stream):
@@ -132,9 +132,9 @@ class OpenChatKitShell(cmd.Cmd):
         print(f"Loading {self._model_name_or_path} to cuda:{self._gpu_id}...")
         self._model = ChatModel(self._model_name_or_path, self._gpu_id, self._max_memory)
 
-        if self._retrieval:
-            print(f"Loading retrieval index...")
-            self._index = wp.WikipediaIndex()
+       # if self._retrieval:
+           # print(f"Loading retrieval index...")
+            #self._index = wp.WikipediaIndex()
 
         self._convo = convo.Conversation(
             self._model.human_id, self._model.bot_id)
@@ -152,7 +152,7 @@ class OpenChatKitShell(cmd.Cmd):
                 self._convo.push_context_turn(results[0])
 
         self._convo.push_human_turn(arg)
-
+        print("__START__")
         output = self._model.do_inference(
             self._convo.get_raw_prompt(),
             self._max_tokens,
@@ -161,6 +161,7 @@ class OpenChatKitShell(cmd.Cmd):
             self._top_k,
             lambda x : print(x, end='', flush=True) if self._do_stream else None,
         )
+        print("__END__")
 
         self._convo.push_model_response(output)
 
