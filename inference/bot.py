@@ -8,6 +8,7 @@ import torch
 import argparse
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
+#added cors
 from flask_cors import CORS
 # Define the Flask app
 app = Flask(__name__)
