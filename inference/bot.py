@@ -12,11 +12,13 @@ from accelerate import infer_auto_device_map, init_empty_weights
 from flask_cors import CORS
 # Define the Flask app
 app = Flask(__name__)
+CORS(app) 
 api_key = 'a1f7e49d-64df-4f0e-94dd-9629464ed6b9'
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Set up ngrok
+
 ngrok_tunnel = ngrok.connect(12345)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12345/")
 
