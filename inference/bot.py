@@ -137,8 +137,7 @@ def chat():
     object_type = type(message)
     print(object_type)
 
-    # Create a ChatModel instance with the model name
-    chat_model = ChatModel(model_name, gpu_id, max_memory)
+    
 
     # Perform chat logic
     bot_response = chat_model.do_inference(
@@ -197,6 +196,9 @@ if __name__ == '__main__':
         for vram in args.gpu_vram:
             gpu, memory = vram.split(':')
             max_memory[int(gpu)] = f"{memory}GiB"
+
+     #Create a ChatModel instance with the model name
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
 
     # Run the Flask app
     app.run(port=12345)
