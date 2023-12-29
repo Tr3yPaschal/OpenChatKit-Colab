@@ -13,6 +13,7 @@ from flask_cors import CORS
 # Define the Flask app
 app = Flask(__name__)
 CORS(app, origins="*")
+
 api_key = 'a1f7e49d-64df-4f0e-94dd-9629464ed6b9'
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +23,8 @@ INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 ngrok_tunnel = ngrok.connect(12345)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12345/")
 
-model_name = "togethercomputer/RedPajama-INCITE-Base-3B-v1"  # Default model name
+chat_model = None
+model_name = ""  # Default model name
 max_memory = None  # Default max_memory (can be updated)
 gpu_id = 0  # Default GPU ID (can be updated)
 
@@ -60,6 +62,7 @@ class ChatModel:
     human_id = "<human>"
     bot_id = "<bot>"
 
+    #def __init__(self, model_name, gpu_id, max_memory):
     def __init__(self, model_name, gpu_id, max_memory):
         device = torch.device('cuda', gpu_id)   # TODO: allow sending to CPU
 
@@ -129,33 +132,97 @@ class ChatModel:
 # # Register the check_api_key function to run before each request
 # app.before_request(check_api_key)
 
-@app.route('/', methods=['POST'])
-def chat():
-    # Get the message from the POST request
-    message = request.form.get('message')
-    print(message)
-    object_type = type(message)
-    print(object_type)
+#Before
+# @app.route('/', methods=['POST'])
+# def chat():
+#     # Get the message from the POST request
+#     message = request.form.get('message')
+#     print(message)
+#     object_type = type(message)
+#     print(object_type)
 
-    # Create a ChatModel instance with the model name
-    chat_model = ChatModel(model_name, gpu_id, max_memory)
+#     # Create a ChatModel instance with the model name
+#     chat_model = ChatModel(model_name, gpu_id, max_memory)
 
-    # Perform chat logic
-    bot_response = chat_model.do_inference(
-        prompt=message,
-        max_new_tokens=128,  # Set the maximum number of tokens for the response
-        do_sample=True,      # Set to True if you want to sample the response
-        temperature=0.6,     # Set the temperature for the LM
-        top_k=40,            # Set the top-k value for the LM
-        stream_callback=None  # Set a stream_callback if needed
-    )
+#     # Perform chat logic
+#     bot_response = chat_model.do_inference(
+#         prompt=message,
+#         max_new_tokens=128,  # Set the maximum number of tokens for the response
+#         do_sample=True,      # Set to True if you want to sample the response
+#         temperature=0.6,     # Set the temperature for the LM
+#         top_k=40,            # Set the top-k value for the LM
+#         stream_callback=None  # Set a stream_callback if needed
+#     )
 
-    # Return the chat bot's response as JSON
-    response = {"response": bot_response}
+#     # Return the chat bot's response as JSON
+#     response = {"response": bot_response}
 
-    return jsonify(response)
+#     return jsonify(response)
 
+#After
+# def chat():
+#     # Get the message from the POST request
+#     message = request.form.get('message')
 
+#     # Perform chat logic using the global chat_model instance
+#     bot_response = chat_model.do_inference(
+#         prompt=message,
+#         max_new_tokens=128,  # Adjust these parameters as needed
+#         do_sample=True,
+#         temperature=0.6,
+#         top_k=40,
+#         stream_callback=None
+#     )
+
+#     # Return the chat bot's response as JSON
+#     return jsonify({"response": bot_response})
+
+# if __name__ == '__main__':
+#     parser = argparse.ArgumentParser(description='Flask ngrok API for Chat Bot')
+#     parser.add_argument(
+#         '--gpu-id',
+#         default=0,
+#         type=int,
+#         help='the ID of the GPU to run on'
+#     )
+#     parser.add_argument(
+#         '--model',
+#         default=f"{INFERENCE_DIR}/../huggingface_models/Pythia-Chat-Base-7B",
+#         help='name/path of the model'
+#     )
+#     parser.add_argument(
+#         '-g',
+#         '--gpu-vram',
+#         action='store',
+#         help='max VRAM to allocate per GPU',
+#         nargs='+',
+#         required=False,
+#     )
+#     parser.add_argument(
+#         '-r',
+#         '--cpu-ram',
+#         default=None,
+#         type=int,
+#         help='max CPU RAM to allocate',
+#         required=False
+#     )
+#     args = parser.parse_args()
+
+#     # Update parameters based on command line arguments
+#     model_name = args.model
+#     gpu_id = args.gpu_id
+
+#     # Set max_memory dictionary if given
+#     if args.gpu_vram is not None:
+#         max_memory = {}
+#         for vram in args.gpu_vram:
+#             gpu, memory = vram.split(':')
+#             max_memory[int(gpu)] = f"{memory}GiB"
+
+#     # Run the Flask app
+#     app.run(port=12345)
+
+#After
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Flask ngrok API for Chat Bot')
     parser.add_argument(
@@ -192,11 +259,14 @@ if __name__ == '__main__':
     gpu_id = args.gpu_id
 
     # Set max_memory dictionary if given
+    max_memory = {}
     if args.gpu_vram is not None:
-        max_memory = {}
         for vram in args.gpu_vram:
             gpu, memory = vram.split(':')
             max_memory[int(gpu)] = f"{memory}GiB"
+
+    # Initialize the global chat_model instance
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
 
     # Run the Flask app
     app.run(port=12345)
