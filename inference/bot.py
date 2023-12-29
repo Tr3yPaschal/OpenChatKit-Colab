@@ -159,23 +159,23 @@ class ChatModel:
 
 #     return jsonify(response)
 
-#After
-# def chat():
-#     # Get the message from the POST request
-#     message = request.form.get('message')
+@app.route('/', methods=['POST'])
+def chat():
+    # Get the message from the POST request
+    message = request.form.get('message')
 
-#     # Perform chat logic using the global chat_model instance
-#     bot_response = chat_model.do_inference(
-#         prompt=message,
-#         max_new_tokens=128,  # Adjust these parameters as needed
-#         do_sample=True,
-#         temperature=0.6,
-#         top_k=40,
-#         stream_callback=None
-#     )
+    # Perform chat logic using the global chat_model instance
+    bot_response = chat_model.do_inference(
+        prompt=message,
+        max_new_tokens=128,  # Adjust these parameters as needed
+        do_sample=True,
+        temperature=0.6,
+        top_k=40,
+        stream_callback=None
+    )
 
-#     # Return the chat bot's response as JSON
-#     return jsonify({"response": bot_response})
+    # Return the chat bot's response as JSON
+    return jsonify({"response": bot_response})
 
 # if __name__ == '__main__':
 #     parser = argparse.ArgumentParser(description='Flask ngrok API for Chat Bot')
