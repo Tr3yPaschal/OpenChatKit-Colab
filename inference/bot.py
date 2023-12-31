@@ -1,3 +1,5 @@
+#curl -X POST -d "message=Cool nice to meet you" -H "Content-Type: application/x-www-form-urlencoded" -H "Authorization: Bearer your_api_key" https://8bb3bfb341d2.ngrok.app
+
 import os
 import sys
 from flask import Flask, request, jsonify
@@ -6,9 +8,12 @@ import torch
 import argparse
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, StoppingCriteria, StoppingCriteriaList
 from accelerate import infer_auto_device_map, init_empty_weights
-
+#added cors
+from flask_cors import CORS
 # Define the Flask app
 app = Flask(__name__)
+CORS(app, origins="*")
+api_key = 'a1f7e49d-64df-4f0e-94dd-9629464ed6b9'
 
 INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,10 +21,11 @@ INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 ngrok_tunnel = ngrok.connect(12345)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12345/")
 
-chat_model = None
-model_name = ""
+
+model_name = "togethercomputer/RedPajama-INCITE-Base-3B-v1"  # Default model name
 max_memory = None  # Default max_memory (can be updated)
 gpu_id = 0  # Default GPU ID (can be updated)
+
 
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
@@ -48,6 +54,7 @@ class StopWordsCriteria(StoppingCriteria):
             self._stream_callback(self._stream_buffer + text)
             self._stream_buffer = ''
         return False
+
 
 class ChatModel:
     human_id = "<human>"
@@ -113,6 +120,18 @@ class ChatModel:
         output = output[len(prompt):]
 
         return output
+    
+# def check_api_key():
+#     if 'Authorization' not in request.headers:
+#         return jsonify({'message': 'Missing API key'}), 401
+
+#     provided_key = request.headers['Authorization']
+
+#     if provided_key != f'Bearer {api_key}':
+#         return jsonify({'message': 'Invalid API key'}), 401
+
+# # Register the check_api_key function to run before each request
+# app.before_request(check_api_key)
 
 @app.route('/', methods=['POST'])
 def chat():
