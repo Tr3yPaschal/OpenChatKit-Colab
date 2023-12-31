@@ -20,6 +20,8 @@ model_name = "togethercomputer/RedPajama-INCITE-Base-3B-v1"  # Default model nam
 max_memory = None  # Default max_memory (can be updated)
 gpu_id = 0  # Default GPU ID (can be updated)
 
+# Create a ChatModel instance with the model name
+chat_model = ChatModel(model_name, gpu_id, max_memory)
 
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
@@ -48,7 +50,6 @@ class StopWordsCriteria(StoppingCriteria):
             self._stream_callback(self._stream_buffer + text)
             self._stream_buffer = ''
         return False
-
 
 class ChatModel:
     human_id = "<human>"
@@ -115,9 +116,6 @@ class ChatModel:
 
         return output
 
-# Create a ChatModel instance with the model name
-    chat_model = ChatModel(model_name, gpu_id, max_memory)
-
 @app.route('/', methods=['POST'])
 def chat():
     # Get the message from the POST request
@@ -140,7 +138,6 @@ def chat():
     response = {"response": bot_response}
 
     return jsonify(response)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Flask ngrok API for Chat Bot')
