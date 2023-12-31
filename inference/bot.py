@@ -2,6 +2,7 @@
 
 import os
 import sys
+import gc
 from flask import Flask, request, jsonify
 from pyngrok import ngrok
 import torch
@@ -10,6 +11,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig, Stoppi
 from accelerate import infer_auto_device_map, init_empty_weights
 #added cors
 from flask_cors import CORS
+
 # Define the Flask app
 app = Flask(__name__)
 CORS(app, origins="*")
@@ -115,6 +117,7 @@ class ChatModel:
             stopping_criteria=StoppingCriteriaList([stop_criteria]),
         )
         output = self._tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
+        gc.collect() 
 
         # remove the context from the output
         output = output[len(prompt):]
