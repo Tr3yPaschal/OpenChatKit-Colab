@@ -6,9 +6,17 @@ set -e
 
 read -p "Enter the URL from email: " PRESIGNED_URL
 echo ""
-read -p "Enter the list of models to download without spaces (7B,13B,70B,7B-chat,13B-chat,70B-chat), or press Enter for all: " MODEL_SIZE
-TARGET_FOLDER="."             # where all files should end up
+echo "Available models to download:"
+echo "Llama-2-7b, Llama-2-7b-chat, Llama-2-13b, Llama-2-13b-chat, Llama-2-70b, Llama-2-70b-chat"
+read -p "Enter the list of models to download separated by spaces, or press Enter for all: " MODEL_SIZE
+TARGET_FOLDER="/meta"             # where all files should end up
 mkdir -p ${TARGET_FOLDER}
+
+# Define your URL here
+PRESIGNED_URL="https://download.llamameta.net/*?Policy=eyJTdGF0ZW1lbnQiOlt7InVuaXF1ZV9oYXNoIjoibjZ6bXN3M3NwcngzamVhZmprbWp1cDg0IiwiUmVzb3VyY2UiOiJodHRwczpcL1wvZG93bmxvYWQubGxhbWFtZXRhLm5ldFwvKiIsIkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTcwNDEzNjc3MH19fV19&Signature=S6tXzbsSi1duzXKdLkywONQOPlrsuRKwLrha2%7EK98gTwizsFJAOU-4UX1h5e2X8aINPF8mbGlY0NUtI2svLLjLUSy5YAM-TdZIly3reKBuPuXJVfjxfavlNtV1zVI%7EvFdDCgKPH7-HQXjR9wpSbL18egS2xb5ky-9V5m8atJ7lOLiPFcMvjrD04no9X7MbVug9av7hniqtfswdhMTzbE2GKDWFzHgMvgXr1p8YIQdQx1uEQR255LpgV537-7oHW7oqdy72tJ5cdTcUBxJx5BJ7fm6PGoD4UqNpFliEMHZOdILtA9kIAJESbuRxzd9NkWYGpg01TKVILYepu9ZCKTVw__&Key-Pair-Id=K15QRJLYKIFSLZ&Download-Request-ID=669185151797806"
+
+# Rest of your script goes here
+
 
 if [[ $MODEL_SIZE == "" ]]; then
     MODEL_SIZE="7B,13B,70B,7B-chat,13B-chat,70B-chat"
