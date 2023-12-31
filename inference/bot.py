@@ -115,7 +115,8 @@ class ChatModel:
 
         return output
 
-
+# Create a ChatModel instance with the model name
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
 
 @app.route('/', methods=['POST'])
 def chat():
@@ -124,9 +125,6 @@ def chat():
     print(message)
     object_type = type(message)
     print(object_type)
-
-    # Create a ChatModel instance with the model name
-    chat_model = ChatModel(model_name, gpu_id, max_memory)
 
     # Perform chat logic
     bot_response = chat_model.do_inference(
