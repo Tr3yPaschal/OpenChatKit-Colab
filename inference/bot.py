@@ -188,6 +188,11 @@ if __name__ == '__main__':
         help='max CPU RAM to allocate',
         required=False
     )
+    parser.add_argument(
+        '--is_decoder', 
+        action='store_true', 
+        help='Set the model as a decoder')
+
     args = parser.parse_args()
 
     # Update parameters based on command line arguments
