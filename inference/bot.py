@@ -16,12 +16,10 @@ INFERENCE_DIR = os.path.dirname(os.path.abspath(__file__))
 ngrok_tunnel = ngrok.connect(12345)
 print(" * ngrok URL: " + str(ngrok_tunnel.public_url) + " -> http://127.0.0.1:12345/")
 
-model_name = "togethercomputer/RedPajama-INCITE-Base-3B-v1"  # Default model name
+chat_model = None
+model_name = ""
 max_memory = None  # Default max_memory (can be updated)
 gpu_id = 0  # Default GPU ID (can be updated)
-
-# Create a ChatModel instance with the model name
-chat_model = ChatModel(model_name, gpu_id, max_memory)
 
 class StopWordsCriteria(StoppingCriteria):
     def __init__(self, tokenizer, stop_words, stream_callback):
@@ -180,6 +178,9 @@ if __name__ == '__main__':
         for vram in args.gpu_vram:
             gpu, memory = vram.split(':')
             max_memory[int(gpu)] = f"{memory}GiB"
+
+    # Initialize the global chat_model instance
+    chat_model = ChatModel(model_name, gpu_id, max_memory)
 
     # Run the Flask app
     app.run(port=12345)
