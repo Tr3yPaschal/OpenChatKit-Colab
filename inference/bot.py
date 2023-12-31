@@ -55,38 +55,42 @@ class ChatModel:
     bot_id = "<bot>"
 
     def __init__(self, model_name, gpu_id, max_memory):
-        device = torch.device('cuda', gpu_id)   # TODO: allow sending to CPU
+        device = torch.device('cuda', gpu_id) if torch.cuda.is_available() else torch.device('cpu')
+        
+        # Load the configuration for the model
+        config = AutoConfig.from_pretrained(model_name)
 
-        # recommended default for devices with > 40 GB VRAM
-        # load model onto one device
-        if max_memory is None:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                model_name, torch_dtype=torch.float16, device_map="auto")
-            self._model.to(device)
-        # load the model with the given max_memory config (for devices with insufficient VRAM or multi-GPU)
-        else:
-            config = AutoConfig.from_pretrained(model_name)
-            # load empty weights
-            with init_empty_weights():
-                model_from_conf = AutoModelForCausalLM.from_config(config)
+        # Initialize the model with empty weights if offloading is needed
+        with init_empty_weights():
+            self._model = AutoModelForCausalLM.from_config(config)
 
-            model_from_conf.tie_weights()
+        # Infer the device map based on available memory
+        device_map = infer_auto_device_map(
+            self._model, max_memory=max_memory, no_split_module_classes=["GPTNeoXLayer"], dtype="float16"
+        )
 
-            # create a device_map from max_memory
-            device_map = infer_auto_device_map(
-                model_from_conf,
-                max_memory=max_memory,
-                no_split_module_classes=["GPTNeoXLayer"],
-                dtype="float16"
-            )
-            # load the model with the above device_map
+        # Check if offloading is needed based on the device map
+        needs_offloading = any(device == 'disk' for device in device_map.values())
+
+        if needs_offloading:
+            # Load the model with device map and offload to disk
             self._model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 device_map=device_map,
-                offload_folder="offload",  # optional offload-to-disk overflow directory (auto-created)
+                offload_folder="offload",  # Offload directory
                 offload_state_dict=True,
                 torch_dtype=torch.float16
             )
+            # Offload the model to the disk
+            offload_directory = "../offload/"  # Specify the offload directory
+            disk_offload(model=self._model, offload_dir=offload_directory)
+        else:
+            # Load the model normally onto the specified device
+            self._model = AutoModelForCausalLM.from_pretrained(
+                model_name, torch_dtype=torch.float16
+            )
+            self._model.to(device)
+
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def do_inference(self, prompt, max_new_tokens, do_sample, temperature, top_k, stream_callback=None):
